@@ -1,10 +1,11 @@
 {
   "name": "pdf-editor",
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "start": "vite",
     "dev": "vite --open",
-    "deploy": "vue-tsc --noEmit && vite build --base=/tgi-pages/ && node utils/publish.js",
+    "deploy": "vue-tsc --noEmit && vite build --base=/pdf-editor/ && node utils/publish.js",
     "build": "run-p type-check build-only",
     "preview": "vite preview --port 4173",
     "build-only": "vite build",
