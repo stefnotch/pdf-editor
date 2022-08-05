@@ -1,6 +1,6 @@
 <template>
   <div class="container" ref="dropZoneRef">
-    <h1>Hello world!</h1>
+    <TheNavBar></TheNavBar>
     <PdfEditor></PdfEditor>
 
     <!--Overlay elements should be the final elements-->
@@ -12,6 +12,10 @@
 import PdfEditor from "./components/PdfEditor.vue";
 import TheFileUploadOverlay from "./components/TheFileUploadOverlay.vue";
 import { useDropZone } from "@vueuse/core";
+import { useDocumentSessionStore } from "./stores/document-sessions";
+import TheNavBar from "./components/TheNavBar.vue";
+
+const documentSessionStore = useDocumentSessionStore();
 
 const dropZoneRef = ref<HTMLDivElement>();
 
