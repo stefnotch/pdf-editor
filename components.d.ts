@@ -7,11 +7,15 @@ export {}
 
 declare module '@vue/runtime-core' {
   export interface GlobalComponents {
+    DragnDrop: typeof import('./src/components/DragnDrop.vue')['default']
+    FileUpload: typeof import('./src/components/FileUpload.vue')['default']
+    FileUploadx: typeof import('./src/components/FileUploadx.vue')['default']
     NButton: typeof import('naive-ui')['NButton']
     NIcon: typeof import('naive-ui')['NIcon']
     NText: typeof import('naive-ui')['NText']
     NUpload: typeof import('naive-ui')['NUpload']
     NUploadDragger: typeof import('naive-ui')['NUploadDragger']
     PdfEditor: typeof import('./src/components/PdfEditor.vue')['default']
+    TheFileUploadOverlay: typeof import('./src/components/TheFileUploadOverlay.vue')['default']
   }
 }
