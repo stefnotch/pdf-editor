@@ -15,6 +15,7 @@
   "dependencies": {
     "@vueuse/core": "^9.1.0",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^2.15.349",
     "pinia": "^2.0.16",
     "vue": "^3.2.37"
   },
