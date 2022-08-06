@@ -4,6 +4,7 @@
 
     <div v-for="(group, index) in pageGroups" :key="index">
       {{ group.name }}
+      <!-- TODO: Be lazy and use https://vueuse.org/core/useVirtualList/ for only rendering some pages-->
       <PdfPage v-for="(page, index) in group.pages" :key="index" :page="page"></PdfPage>
     </div>
   </div>
@@ -32,4 +33,5 @@ const pageBounds = ref<{
 // https://github.com/mozilla/pdf.js/issues/10679#issuecomment-867541293
 // https://github.com/mozilla/pdf.js/issues/10509
 // https://github.com/mozilla/pdf.js/issues/7630
+// https://vueuse.org/core/useDevicePixelRatio/
 </script>
