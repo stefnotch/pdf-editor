@@ -1,21 +1,22 @@
 import { defineStore, acceptHMRUpdate } from "pinia";
-import { get, set } from "idb-keyval";
-
-// Taken very much from https://github.com/stefnotch/starboard-editor/blob/main/src/useNotebookStorage.ts
-
+import { PDFDocument } from "pdf-lib";
 /**
  * The data store for a given document.
+ * Notice how it's a mostly non-destructive format. It doesn't apply the changes, instead it stores what the final document should look like.
+ * This format makes undo and redo much easier to implement.
  */
 interface PdfDocumentSession {
   readonly id: string;
   /**
-   * ISO timestamp
-   */
-  lastUpdatedAt: number;
-  /**
    * The selected files
    */
-  files: Map<string, File>;
+  files: Map<
+    string,
+    {
+      file: File;
+      document: PDFDocument;
+    }
+  >;
   /**
    * Page-groups
    */
@@ -29,49 +30,54 @@ interface PageGroup {
 
 interface Page {
   fileId: string;
-  pageNumber: number;
+  pageIndex: number;
 }
-
-const sessions = shallowReactive<Map<string, PdfDocumentSession>>(new Map<string, PdfDocumentSession>());
-const isLoaded = ref(false);
-
-const initPromise = Promise.allSettled([
-  get<Map<string, PdfDocumentSession>>("pdf-sessions").then((v) => {
-    if (v) {
-      for (const entry of v.entries()) {
-        sessions.set(entry[0], entry[1]);
-      }
-    }
-  }),
-]).then((v) => {
-  isLoaded.value = true;
-  return v;
-});
 
 export const useDocumentSessionStore = defineStore("document-session-store", () => {
   const hasUnsavedChanges = ref(false);
+  const session = ref<PdfDocumentSession>({
+    id: crypto.randomUUID(),
+    files: new Map(),
+    groups: [],
+  });
 
-  async function createSession(files: File[]) {
-    const session = {
-      id: crypto.randomUUID(),
-      name: files.at(0)?.name ?? "Untitled.pdf",
-      files: [],
-    };
-    await initPromise;
-    sessions.set(session.id, session);
-    await set("pdf-sessions", toRaw(sessions));
-    return session.id;
+  const documentName = computed(() => {
+    const groups = session.value.groups;
+    if (groups.length === 0) {
+      return "Untitled Document";
+    } else {
+      return groups[0].name;
+    }
+  });
+
+  async function addFiles(files: File[]) {
+    await Promise.all(
+      files.map(async (file) => {
+        const id = crypto.randomUUID();
+        const pdfDocument = await PDFDocument.load(await file.arrayBuffer());
+        session.value.files.set(id, {
+          file,
+          document: pdfDocument,
+        });
+
+        session.value.groups.push({
+          name: withoutPdfExtension(file.name),
+          pages: pdfDocument.getPageIndices().map((pageIndex) => {
+            return { fileId: id, pageIndex: pageIndex };
+          }),
+        });
+      })
+    );
   }
 
-  async function getSession(sessionId: string) {
-    await initPromise;
-    return sessions.get(sessionId) ?? null;
+  function withoutPdfExtension(fileName: string) {
+    return fileName.replace(/\.pdf$/i, "");
   }
 
   return {
-    getSession,
-    createSession,
-    isLoaded: computed(() => isLoaded.value),
+    addFiles,
+    documentName,
+    session,
     hasUnsavedChanges,
   };
 });
