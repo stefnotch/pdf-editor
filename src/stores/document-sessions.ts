@@ -7,20 +7,33 @@ import { get, set } from "idb-keyval";
  * The data store for a given document.
  */
 interface PdfDocumentSession {
-  id: string;
+  readonly id: string;
   /**
-   * Name also used for the output
+   * ISO timestamp
    */
-  name: string;
+  lastUpdatedAt: number;
   /**
    * The selected files
    */
-  files: File[];
+  files: Map<string, File>;
+  /**
+   * Page-groups
+   */
+  groups: PageGroup[];
+}
+
+interface PageGroup {
+  name: string;
+  pages: Page[];
+}
+
+interface Page {
+  fileId: string;
+  pageNumber: number;
 }
 
 const sessions = shallowReactive<Map<string, PdfDocumentSession>>(new Map<string, PdfDocumentSession>());
 const isLoaded = ref(false);
-const hasUnsavedChanges = ref(false);
 
 const initPromise = Promise.allSettled([
   get<Map<string, PdfDocumentSession>>("pdf-sessions").then((v) => {
@@ -36,29 +49,30 @@ const initPromise = Promise.allSettled([
 });
 
 export const useDocumentSessionStore = defineStore("document-session-store", () => {
-  const selectedSession = ref<PdfDocumentSession | null>(null);
-
-  async function openSession(sessionId: string) {
-    await initPromise;
-    selectedSession.value = sessions.get(sessionId) ?? null;
-  }
+  const hasUnsavedChanges = ref(false);
 
   async function createSession(files: File[]) {
-    selectedSession.value = {
+    const session = {
       id: crypto.randomUUID(),
       name: files.at(0)?.name ?? "Untitled.pdf",
       files: [],
     };
     await initPromise;
-    sessions.set(selectedSession.value.id, selectedSession.value);
+    sessions.set(session.id, session);
     await set("pdf-sessions", toRaw(sessions));
+    return session.id;
+  }
+
+  async function getSession(sessionId: string) {
+    await initPromise;
+    return sessions.get(sessionId) ?? null;
   }
 
   return {
-    openSession,
+    getSession,
     createSession,
     isLoaded: computed(() => isLoaded.value),
-    hasUnsavedChanges: computed(() => hasUnsavedChanges.value),
+    hasUnsavedChanges,
   };
 });
 

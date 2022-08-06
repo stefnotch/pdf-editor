@@ -1,12 +1,20 @@
 <template>
-  <n-upload :default-upload="false" accept="application/pdf" :file-list="[]" multiple directory-dnd @change="fileUploaded">
-    <n-button>Select Document</n-button>
-  </n-upload>
+  <div>hmm</div>
 </template>
 <script setup lang="ts">
-import type { UploadFileInfo } from "naive-ui";
+import { useDocumentSessionStore } from '@/stores/document-sessions.js';
 
-function fileUploaded(data: { fileList: UploadFileInfo[] }) {
-  console.log(data);
+const props = defineProps<{
+  id: string;
+}>();
+
+interface PdfDocument {
+  name: string;
 }
+const documentSessionStore = useDocumentSessionStore();
+
+const document = ref<PdfDocument | null>(null);
+watchEffect(() => {
+  const loadedDocument = documentSessionStore.(props.id);
+});
 </script>
