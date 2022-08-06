@@ -5,7 +5,7 @@ import { PDFDocument } from "pdf-lib";
  * Notice how it's a mostly non-destructive format. It doesn't apply the changes, instead it stores what the final document should look like.
  * This format makes undo and redo much easier to implement.
  */
-interface PdfDocumentSession {
+export interface PdfDocumentSession {
   readonly id: string;
   /**
    * The selected files
@@ -23,12 +23,12 @@ interface PdfDocumentSession {
   groups: PageGroup[];
 }
 
-interface PageGroup {
+export interface PageGroup {
   name: string;
   pages: Page[];
 }
 
-interface Page {
+export interface Page {
   fileId: string;
   pageIndex: number;
 }

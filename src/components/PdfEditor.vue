@@ -1,10 +1,28 @@
 <template>
-  <div>PDF Document Name {{ documentSessionStore.documentName }}</div>
+  <div>
+    PDF Document Name {{ documentSessionStore.documentName }}
+
+    <div v-for="(group, index) in pageGroups" :key="index">
+      {{ group.name }}
+      <PdfPage v-for="(page, index) in group.pages" :key="index" :page="page"></PdfPage>
+    </div>
+  </div>
 </template>
 <script setup lang="ts">
 import { useDocumentSessionStore } from "@/stores/document-sessions.js";
+import PdfPage from "./PdfPage.vue";
 
 const documentSessionStore = useDocumentSessionStore();
+
+const pageGroups = computed(() => documentSessionStore.session.groups);
+
+const pageBounds = ref<{
+  x: number;
+  y: number;
+}>({
+  x: 80,
+  y: 120,
+});
 
 // TODO: when rendering, make sure that it looks good on
 // - high DPI displays
