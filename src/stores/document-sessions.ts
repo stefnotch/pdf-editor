@@ -1,5 +1,7 @@
 import { defineStore, acceptHMRUpdate } from "pinia";
 import { PDFDocument } from "pdf-lib";
+import * as pdfjs from "pdfjs-dist";
+
 /**
  * The data store for a given document.
  * Notice how it's a mostly non-destructive format. It doesn't apply the changes, instead it stores what the final document should look like.
@@ -7,8 +9,9 @@ import { PDFDocument } from "pdf-lib";
  */
 export interface PdfDocumentSession {
   readonly id: string;
+
   /**
-   * The selected files
+   * The selected physical PDF files
    */
   files: Map<
     string,
@@ -17,6 +20,12 @@ export interface PdfDocumentSession {
       document: PDFDocument;
     }
   >;
+
+  /**
+   * The pdf.js documents
+   */
+  rendered: Map<string, pdfjs.PDFDocumentProxy>;
+
   /**
    * Page-groups
    */
@@ -38,6 +47,7 @@ export const useDocumentSessionStore = defineStore("document-session-store", () 
   const session = ref<PdfDocumentSession>({
     id: crypto.randomUUID(),
     files: new Map(),
+    rendered: new Map(),
     groups: [],
   });
 
@@ -54,11 +64,15 @@ export const useDocumentSessionStore = defineStore("document-session-store", () 
     await Promise.all(
       files.map(async (file) => {
         const id = crypto.randomUUID();
-        const pdfDocument = await PDFDocument.load(await file.arrayBuffer());
+        const binaryData = new Uint8Array(await file.arrayBuffer());
+        const pdfDocument = await PDFDocument.load(binaryData);
         session.value.files.set(id, {
           file,
-          document: pdfDocument,
+          document: markRaw(pdfDocument),
         });
+
+        // Instantly start loading the pdf.js document, since we'll need it
+        pdfjs.getDocument({ data: binaryData }).promise.then((rendered) => session.value.rendered.set(id, markRaw(rendered)));
 
         session.value.groups.push({
           name: withoutPdfExtension(file.name),

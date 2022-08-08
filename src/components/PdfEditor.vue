@@ -66,6 +66,8 @@ const renderedDocuments = computed(() => {
 // https://github.com/mozilla/pdf.js/issues/10509
 // https://github.com/mozilla/pdf.js/issues/7630
 // https://vueuse.org/core/useDevicePixelRatio/
+
+// TODO: When resizing/zooming, make sure that the *same* pages remain visible.
 </script>
 <template>
   <div>
