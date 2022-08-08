@@ -6,7 +6,8 @@ import { createPinia } from "pinia";
 import App from "./App.vue";
 
 // styling
-import "./styling/base.css";
+import "./main.css";
+import "virtual:windi.css";
 
 // pdf.js
 import * as pdfjs from "pdfjs-dist";

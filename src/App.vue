@@ -1,5 +1,5 @@
 <template>
-  <div class="container" ref="dropZoneRef">
+  <div class="main-container" ref="dropZoneRef">
     <TheNavBar></TheNavBar>
     <div class="content">
       <PdfEditor></PdfEditor>
@@ -42,7 +42,7 @@ function fileUploaded(data: { fileList: UploadFileInfo[] }) {
 const { isOverDropZone } = useDropZone(dropZoneRef, onDrop);
 </script>
 <style scoped>
-.container {
+.main-container {
   position: absolute;
   height: 100vh;
   width: 100vw;
