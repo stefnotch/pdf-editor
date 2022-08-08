@@ -1,6 +1,7 @@
 import { defineStore, acceptHMRUpdate } from "pinia";
 import { PDFDocument } from "pdf-lib";
 import * as pdfjs from "pdfjs-dist";
+import { useMemoize, type UseMemoizeReturn } from "@vueuse/core";
 
 /**
  * The data store for a given document.
@@ -24,7 +25,14 @@ export interface PdfDocumentSession {
   /**
    * The pdf.js documents
    */
-  rendered: Map<string, pdfjs.PDFDocumentProxy>;
+  rendered: Map<
+    string,
+    {
+      document: pdfjs.PDFDocumentProxy;
+      cache: UseMemoizeReturn<Promise<pdfjs.PDFPageProxy>, [number]>;
+      pages: Map<number, pdfjs.PDFPageProxy>;
+    }
+  >;
 
   /**
    * Page-groups
@@ -72,7 +80,26 @@ export const useDocumentSessionStore = defineStore("document-session-store", () 
         });
 
         // Instantly start loading the pdf.js document, since we'll need it
-        pdfjs.getDocument({ data: binaryData }).promise.then((rendered) => session.value.rendered.set(id, markRaw(rendered)));
+        pdfjs.getDocument({ data: binaryData }).promise.then((rendered) => {
+          const pages = reactive(new Map());
+
+          session.value.rendered.set(id, {
+            document: markRaw(rendered),
+            // Basically we don't want to needlessly load pages multiple times. And we don't like promises, we want beautiful reactive data.
+            cache: useMemoize(
+              async (pageIndex: number) => {
+                const renderedPage = await rendered.getPage(pageIndex + 1);
+                pages.set(pageIndex, markRaw(renderedPage));
+                return renderedPage;
+              },
+              {
+                getKey: (v) => v as any, // https://github.com/vueuse/vueuse/issues/2062
+              }
+            ),
+            // Reactive pages
+            pages: pages,
+          });
+        });
 
         session.value.groups.push({
           name: withoutPdfExtension(file.name),
@@ -88,11 +115,24 @@ export const useDocumentSessionStore = defineStore("document-session-store", () 
     return fileName.replace(/\.pdf$/i, "");
   }
 
+  function getRenderedPage(page: Page): pdfjs.PDFPageProxy | null {
+    const rendered = session.value.rendered.get(page.fileId);
+    if (rendered === undefined) return null;
+
+    const cachedPage = rendered.pages.get(page.pageIndex);
+    if (cachedPage !== undefined) return cachedPage;
+
+    // Start loading it
+    rendered.cache(page.pageIndex);
+    return null;
+  }
+
   return {
     addFiles,
     documentName,
     session,
     hasUnsavedChanges,
+    getRenderedPage,
   };
 });
 

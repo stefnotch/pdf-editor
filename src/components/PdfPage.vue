@@ -11,4 +11,6 @@ const props = defineProps<{
 }>();
 
 const documentSessionStore = useDocumentSessionStore();
+
+const pageToRender = computed(() => documentSessionStore.getRenderedPage(props.page));
 </script>
