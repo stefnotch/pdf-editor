@@ -79,7 +79,7 @@ const renderedDocuments = computed(() => {
         {{ document.name }}
         <div v-for="(row, index) in document.rows" :key="index" class="pdf-page-row">
           <div v-for="(page, index) in row.pages" :key="index" class="pdf-page">
-            <PdfPage :page="page"></PdfPage>
+            <PdfPage :page="page" :bounds="pageBounds"></PdfPage>
           </div>
         </div>
       </div>
