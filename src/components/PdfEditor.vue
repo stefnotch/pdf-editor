@@ -81,10 +81,8 @@ const {
 // TODO: When resizing/zooming, make sure that the *same* pages remain visible.
 </script>
 <template>
-  <div ref="pagesViewElement" class="grow">
-    <div v-bind="containerProps" style="height: 100%; overflow-y: scroll" class="border-box">
-      <div style="height: 2000px"></div>
-
+  <div ref="pagesViewElement" class="h-full">
+    <div v-bind="containerProps" style="height: 100%; overflow-y: scroll">
       <div v-bind="wrapperProps">
         <div v-for="documentItem in virtualRenderedDocuments" :key="documentItem.index" class="pdf-document">
           <div :style="{ height: documentHeaderHeight + 'px' }">{{ documentItem.data.name }}</div>

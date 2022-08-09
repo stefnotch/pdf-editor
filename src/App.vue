@@ -30,13 +30,14 @@ const { isOverDropZone } = useDropZone(dropZoneRef, onDrop);
   <div class="absolute h-full w-full flex flex-col" ref="dropZoneRef">
     <TheNavBar></TheNavBar>
     <!-- Flexbox is terribly badly designed https://stackoverflow.com/questions/36230944/prevent-flex-items-from-overflowing-a-container -->
-    <div class="self-stretch">
-      <PdfEditor></PdfEditor>
-
-      <n-upload :default-upload="false" accept="application/pdf" :file-list="[]" multiple directory-dnd @change="fileUploaded">
-        <n-button>Select or drag PDF documents</n-button>
-      </n-upload>
+    <div class="grow relative">
+      <div class="absolute h-full w-full">
+        <PdfEditor></PdfEditor>
+      </div>
     </div>
+    <n-upload :default-upload="false" accept="application/pdf" :file-list="[]" multiple directory-dnd @change="fileUploaded">
+      <n-button>Select or drag PDF documents</n-button>
+    </n-upload>
 
     <!--Overlay elements should be the final elements-->
     <TheFileUploadOverlay class="dropzone" v-if="isOverDropZone"></TheFileUploadOverlay>
