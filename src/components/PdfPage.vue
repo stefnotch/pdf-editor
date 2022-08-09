@@ -17,6 +17,9 @@ const props = defineProps<{
   };
 }>();
 
+// TODO: Faster rendering using https://github.com/mozilla/pdf.js/issues/10319
+// Relevant Firefox bug https://bugzilla.mozilla.org/show_bug.cgi?id=1390089
+
 const pageCanvas = ref<HTMLCanvasElement | null>(null);
 
 const documentSessionStore = useDocumentSessionStore();

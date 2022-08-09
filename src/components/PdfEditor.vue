@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useDocumentSessionStore, type Page } from "@/stores/document-sessions";
-import { useElementSize, useVirtualList } from "@vueuse/core";
+import { useElementSize } from "@vueuse/core";
 import PdfPage from "./PdfPage.vue";
 
 const documentSessionStore = useDocumentSessionStore();
@@ -48,23 +48,16 @@ const renderedDocuments = computed(() => {
 
 const documentHeaderHeight = ref(20);
 
-const {
-  list: virtualRenderedDocuments,
-  containerProps,
-  wrapperProps,
-} = useVirtualList(renderedDocuments, {
-  itemHeight: (index) => renderedDocuments.value[index].rows.length * pageBounds.value.y + documentHeaderHeight.value,
-  overscan: 1,
-});
-
 /**
  * # Virtual List VS Resize Observer
  * Virtual List:
  * - https://vueuse.org/core/useVirtualList/
  * - Scales rather nicely to the case where the screen is rather small and the PDF has a ton of pages.
  * - We always see all pages in one row, so a virtual list would do the job rather well.
+ * - https://github.com/vueuse/vueuse/issues/2065
+ * - and it occasionally caused the browser to hang, haven't investigated why
  *
- * Resize Observer:
+ * Intersection Observer:
  * - We need to write it ourselves, since the Vueuse library only supports having one observer per element. (Inefficient)
  */
 
@@ -81,17 +74,12 @@ const {
 // TODO: When resizing/zooming, make sure that the *same* pages remain visible.
 </script>
 <template>
-  <div ref="pagesViewElement" class="h-full">
-    <div v-bind="containerProps" style="height: 100%; overflow-y: scroll">
-      <div v-bind="wrapperProps">
-        <div v-for="documentItem in virtualRenderedDocuments" :key="documentItem.index" class="pdf-document">
-          <div :style="{ height: documentHeaderHeight + 'px' }">{{ documentItem.data.name }}</div>
-          <!-- TODO: Be lazy and use https://vueuse.org/core/useVirtualList/ for only rendering some pages-->
-          <div v-for="(row, index) in documentItem.data.rows" :key="index" class="pdf-page-row">
-            <div v-for="(page, index) in row.pages" :key="index" class="pdf-page">
-              <PdfPage :page="page" :bounds="pageBounds"></PdfPage>
-            </div>
-          </div>
+  <div ref="pagesViewElement" class="h-full overflow-y-scroll">
+    <div v-for="(document, index) in renderedDocuments" :key="index" class="pdf-document">
+      <div :style="{ height: documentHeaderHeight + 'px' }">{{ document.name }}</div>
+      <div v-for="(row, index) in document.rows" :key="index" class="pdf-page-row">
+        <div v-for="(page, index) in row.pages" :key="index" class="pdf-page">
+          <PdfPage :page="page" :bounds="pageBounds"></PdfPage>
         </div>
       </div>
     </div>
