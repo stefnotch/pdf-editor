@@ -29,7 +29,8 @@ const { isOverDropZone } = useDropZone(dropZoneRef, onDrop);
 <template>
   <div class="absolute h-full w-full flex flex-col" ref="dropZoneRef">
     <TheNavBar></TheNavBar>
-    <div class="overflow-y-scroll grow">
+    <!-- Flexbox is terribly badly designed https://stackoverflow.com/questions/36230944/prevent-flex-items-from-overflowing-a-container -->
+    <div class="self-stretch">
       <PdfEditor></PdfEditor>
 
       <n-upload :default-upload="false" accept="application/pdf" :file-list="[]" multiple directory-dnd @change="fileUploaded">

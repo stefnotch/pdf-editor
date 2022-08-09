@@ -54,6 +54,7 @@ const {
   wrapperProps,
 } = useVirtualList(renderedDocuments, {
   itemHeight: (index) => renderedDocuments.value[index].rows.length * pageBounds.value.y + documentHeaderHeight.value,
+  overscan: 1,
 });
 
 /**
@@ -80,10 +81,10 @@ const {
 // TODO: When resizing/zooming, make sure that the *same* pages remain visible.
 </script>
 <template>
-  <div>
-    PDF Document Name: {{ documentSessionStore.documentName }}
+  <div ref="pagesViewElement" class="grow">
+    <div v-bind="containerProps" style="height: 100%; overflow-y: scroll" class="border-box">
+      <div style="height: 2000px"></div>
 
-    <div v-bind="containerProps" style="height: auto" ref="pagesViewElement">
       <div v-bind="wrapperProps">
         <div v-for="documentItem in virtualRenderedDocuments" :key="documentItem.index" class="pdf-document">
           <div :style="{ height: documentHeaderHeight + 'px' }">{{ documentItem.data.name }}</div>
