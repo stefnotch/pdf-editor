@@ -1,7 +1,7 @@
 import { defineStore, acceptHMRUpdate } from "pinia";
 import { PDFDocument } from "pdf-lib";
 import * as pdfjs from "pdfjs-dist";
-import { useMemoize, type UseMemoizeReturn } from "@vueuse/core";
+import { useDevicePixelRatio, useMemoize, type UseMemoizeReturn } from "@vueuse/core";
 
 /**
  * The data store for a given document.
@@ -50,6 +50,10 @@ export interface Page {
   pageIndex: number;
 }
 
+export const { pixelRatio } = useDevicePixelRatio();
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const useDocumentSessionStore = defineStore("document-session-store", () => {
   const hasUnsavedChanges = ref(false);
   const session = ref<PdfDocumentSession>({
@@ -88,6 +92,8 @@ export const useDocumentSessionStore = defineStore("document-session-store", () 
             // Basically we don't want to needlessly load pages multiple times. And we don't like promises, we want beautiful reactive data.
             cache: useMemoize(
               async (pageIndex: number) => {
+                // TODO: Attempt to render the pages that the user sees first
+                await sleep(0); // Wait a bit to prevent the browser from freezing
                 const renderedPage = await rendered.getPage(pageIndex + 1);
                 pages.set(pageIndex, markRaw(renderedPage));
                 return renderedPage;

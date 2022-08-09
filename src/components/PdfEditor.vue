@@ -28,23 +28,31 @@ interface RenderedPageRow {
   pages: Page[];
 }
 
-const renderedDocuments = computed(() => {
-  const maximumPagesPerRow = Math.floor(pagesViewSize.width.value / pageBounds.value.x);
-  const documents: RenderedDocument[] = pageGroups.value.map((group) => {
-    const doc: RenderedDocument = {
-      name: group.name,
-      rows: [],
-    };
-    for (let i = 0; i < group.pages.length; i += maximumPagesPerRow) {
-      const row: RenderedPageRow = {
-        pages: group.pages.slice(i, i + maximumPagesPerRow),
+const maximumPagesPerRow = computed(() => Math.floor(pagesViewSize.width.value / pageBounds.value.x));
+
+// TODO: Why does this lead to a browser hang if I change it to a computed, and then edit the pageBounds?
+const renderedDocuments = ref<RenderedDocument[]>([]);
+watch(
+  [pageGroups, maximumPagesPerRow],
+  ([pageGroups, maximumPagesPerRow]) => {
+    renderedDocuments.value = pageGroups.map((group) => {
+      const doc: RenderedDocument = {
+        name: group.name,
+        rows: [],
       };
-      doc.rows.push(row);
-    }
-    return doc;
-  });
-  return documents;
-});
+      for (let i = 0; i < group.pages.length; i += maximumPagesPerRow) {
+        const row: RenderedPageRow = {
+          pages: group.pages.slice(i, i + maximumPagesPerRow),
+        };
+        doc.rows.push(row);
+      }
+      return doc;
+    });
+  },
+  {
+    deep: true,
+  }
+);
 
 const documentHeaderHeight = ref(20);
 
@@ -55,21 +63,10 @@ const documentHeaderHeight = ref(20);
  * - Scales rather nicely to the case where the screen is rather small and the PDF has a ton of pages.
  * - We always see all pages in one row, so a virtual list would do the job rather well.
  * - https://github.com/vueuse/vueuse/issues/2065
- * - and it occasionally caused the browser to hang, haven't investigated why
  *
  * Intersection Observer:
  * - We need to write it ourselves, since the Vueuse library only supports having one observer per element. (Inefficient)
  */
-
-// TODO: when rendering, make sure that it looks good on
-// - high DPI displays
-// - at any zoom level (and doesn't mess up when reloading while zoomed in/out)
-// - when Windows is set to a custom scale level
-// See:
-// https://github.com/mozilla/pdf.js/issues/10679#issuecomment-867541293
-// https://github.com/mozilla/pdf.js/issues/10509
-// https://github.com/mozilla/pdf.js/issues/7630
-// https://vueuse.org/core/useDevicePixelRatio/
 
 // TODO: When resizing/zooming, make sure that the *same* pages remain visible.
 </script>
