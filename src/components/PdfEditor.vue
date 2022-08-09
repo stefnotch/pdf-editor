@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useDocumentSessionStore, type Page } from "@/stores/document-sessions";
-import { useElementSize } from "@vueuse/core";
+import { useElementSize, useVirtualList } from "@vueuse/core";
 import PdfPage from "./PdfPage.vue";
 
 const documentSessionStore = useDocumentSessionStore();
@@ -46,6 +46,16 @@ const renderedDocuments = computed(() => {
   return documents;
 });
 
+const documentHeaderHeight = ref(20);
+
+const {
+  list: virtualRenderedDocuments,
+  containerProps,
+  wrapperProps,
+} = useVirtualList(renderedDocuments, {
+  itemHeight: (index) => renderedDocuments.value[index].rows.length * pageBounds.value.y + documentHeaderHeight.value,
+});
+
 /**
  * # Virtual List VS Resize Observer
  * Virtual List:
@@ -72,14 +82,16 @@ const renderedDocuments = computed(() => {
 <template>
   <div>
     PDF Document Name: {{ documentSessionStore.documentName }}
-    <!-- TODO: Be lazy and use https://vueuse.org/core/useVirtualList/ for only rendering some pages-->
 
-    <div ref="pagesViewElement">
-      <div v-for="(document, index) in renderedDocuments" :key="index" class="pdf-document">
-        {{ document.name }}
-        <div v-for="(row, index) in document.rows" :key="index" class="pdf-page-row">
-          <div v-for="(page, index) in row.pages" :key="index" class="pdf-page">
-            <PdfPage :page="page" :bounds="pageBounds"></PdfPage>
+    <div v-bind="containerProps" style="height: auto" ref="pagesViewElement">
+      <div v-bind="wrapperProps">
+        <div v-for="documentItem in virtualRenderedDocuments" :key="documentItem.index" class="pdf-document">
+          <div :style="{ height: documentHeaderHeight + 'px' }">{{ documentItem.data.name }}</div>
+          <!-- TODO: Be lazy and use https://vueuse.org/core/useVirtualList/ for only rendering some pages-->
+          <div v-for="(row, index) in documentItem.data.rows" :key="index" class="pdf-page-row">
+            <div v-for="(page, index) in row.pages" :key="index" class="pdf-page">
+              <PdfPage :page="page" :bounds="pageBounds"></PdfPage>
+            </div>
           </div>
         </div>
       </div>

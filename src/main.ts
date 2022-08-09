@@ -7,7 +7,7 @@ import App from "./App.vue";
 
 // styling
 import "./main.css";
-import "virtual:windi.css";
+import "uno.css";
 
 // pdf.js
 import * as pdfjs from "pdfjs-dist";
