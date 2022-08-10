@@ -145,34 +145,44 @@ export const useDocumentSessionStore = defineStore("document-session-store", () 
   }
 
   async function merge(documents: PageGroup[]) {
+    /* Notes:
+    Using pdfDoc.embedPages does not preserve hyperlinks (neither links to external pages nor internal links).
+    Using pdfDoc.embedPdf also does not preserve annotations. (see https://github.com/Hopding/pdf-lib/issues/849 for an official response)
+    
+    */
     const pdfDoc = await PDFDocument.create();
-    // TODO: Try out pdfDoc.embedPdf
     // TODO: Try out copying
 
     // Ew, not very pretty code
     const pagesToEmbed: [Page, PDFEmbeddedPage | null][] = [];
-    const pagesToEmbedMap = new Map<string, { pdfPage: PDFPage; callback: (embeddedPage: PDFEmbeddedPage) => void }[]>();
+    const pagesToEmbedMap = new Map<string, { page: Page; callback: (embeddedPage: PDFEmbeddedPage) => void }[]>();
     documents.forEach((v) =>
       v.pages.forEach((page) => {
-        const pdfPage = session.value.files.get(page.fileId)?.document?.getPage(page.pageIndex);
-        if (pdfPage !== undefined) {
-          const v: [Page, PDFEmbeddedPage | null] = [page, null];
-          getOrDefault(pagesToEmbedMap, page.fileId, () => []).push({
-            pdfPage,
-            callback: (embeddedPage) => {
-              v[1] = embeddedPage;
-            },
-          });
-          pagesToEmbed.push(v);
-        }
+        const v: [Page, PDFEmbeddedPage | null] = [page, null];
+        getOrDefault(pagesToEmbedMap, page.fileId, () => []).push({
+          page,
+          callback: (embeddedPage) => {
+            v[1] = embeddedPage;
+          },
+        });
+        pagesToEmbed.push(v);
       })
     );
 
     await Promise.all(
-      [...pagesToEmbedMap.values()].map(async (pages) => {
-        const result = await pdfDoc.embedPages(pages.map((v) => v.pdfPage));
+      [...pagesToEmbedMap.keys()].map(async (fileId) => {
+        const pdf = session.value.files.get(fileId)?.document;
+        if (pdf === undefined) return;
+
+        const pagesToEmbed = pagesToEmbedMap.get(fileId);
+        if (pagesToEmbed === undefined) return;
+
+        const result = await pdfDoc.embedPdf(
+          pdf,
+          pagesToEmbed.map((v) => v.page.pageIndex)
+        );
         result.forEach((embeddedPage, index) => {
-          pages[index].callback(embeddedPage);
+          pagesToEmbed[index].callback(embeddedPage);
         });
       })
     );
