@@ -148,17 +148,17 @@ export const useDocumentSessionStore = defineStore("document-session-store", () 
     /* Notes:
     Using pdfDoc.embedPages does not preserve hyperlinks (neither links to external pages nor internal links).
     Using pdfDoc.embedPdf also does not preserve annotations. (see https://github.com/Hopding/pdf-lib/issues/849 for an official response)
-    
+    Using pdfDoc.copyPages preserves annotations, but internal links still break. (see https://github.com/Hopding/pdf-lib/issues/341)
+    copyPages also breaks forms (see https://github.com/Hopding/pdf-lib/issues/252)
     */
     const pdfDoc = await PDFDocument.create();
-    // TODO: Try out copying
 
     // Ew, not very pretty code
-    const pagesToEmbed: [Page, PDFEmbeddedPage | null][] = [];
-    const pagesToEmbedMap = new Map<string, { page: Page; callback: (embeddedPage: PDFEmbeddedPage) => void }[]>();
+    const pagesToEmbed: [Page, PDFPage | null][] = [];
+    const pagesToEmbedMap = new Map<string, { page: Page; callback: (embeddedPage: PDFPage) => void }[]>();
     documents.forEach((v) =>
       v.pages.forEach((page) => {
-        const v: [Page, PDFEmbeddedPage | null] = [page, null];
+        const v: [Page, PDFPage | null] = [page, null];
         getOrDefault(pagesToEmbedMap, page.fileId, () => []).push({
           page,
           callback: (embeddedPage) => {
@@ -170,14 +170,11 @@ export const useDocumentSessionStore = defineStore("document-session-store", () 
     );
 
     await Promise.all(
-      [...pagesToEmbedMap.keys()].map(async (fileId) => {
+      [...pagesToEmbedMap.entries()].map(async ([fileId, pagesToEmbed]) => {
         const pdf = session.value.files.get(fileId)?.document;
         if (pdf === undefined) return;
 
-        const pagesToEmbed = pagesToEmbedMap.get(fileId);
-        if (pagesToEmbed === undefined) return;
-
-        const result = await pdfDoc.embedPdf(
+        const result = await pdfDoc.copyPages(
           pdf,
           pagesToEmbed.map((v) => v.page.pageIndex)
         );
@@ -189,8 +186,7 @@ export const useDocumentSessionStore = defineStore("document-session-store", () 
 
     pagesToEmbed.forEach(([, embeddedPage]) => {
       if (embeddedPage !== null) {
-        const page = pdfDoc.addPage();
-        page.drawPage(embeddedPage);
+        pdfDoc.addPage(embeddedPage);
       }
     });
 
