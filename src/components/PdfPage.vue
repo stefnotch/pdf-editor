@@ -68,7 +68,6 @@ watch([pageCanvas, pageToRender, () => props.bounds, pixelRatio], ([canvas, page
 });
 </script>
 <template>
-  <!-- TODO: Render the page -->
   <!-- TODO: Only render the page when this element is visible -->
   <div class="relative h-full w-full">
     <canvas ref="pageCanvas"></canvas>
