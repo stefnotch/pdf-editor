@@ -2,6 +2,7 @@ import { defineStore, acceptHMRUpdate } from "pinia";
 import { PDFDocument, PDFEmbeddedPage, PDFPage } from "pdf-lib";
 import * as pdfjs from "pdfjs-dist";
 import { useDevicePixelRatio, useMemoize, useObjectUrl, type UseMemoizeReturn } from "@vueuse/core";
+import { zip } from "fflate";
 
 /**
  * The data store for a given document.
@@ -62,6 +63,10 @@ function getOrDefault<K, V>(map: Map<K, V>, key: K, defaultValue: () => V): V {
     map.set(key, value);
     return value;
   }
+}
+
+function removeDuplicates<T>(values: T[]): T[] {
+  return Array.from(new Set(values));
 }
 
 export const useDocumentSessionStore = defineStore("document-session-store", () => {
@@ -144,52 +149,49 @@ export const useDocumentSessionStore = defineStore("document-session-store", () 
     return null;
   }
 
-  async function merge(documents: PageGroup[]) {
+  function pageToMapKey(page: Page) {
+    return JSON.stringify([page.fileId, page.pageIndex]);
+  }
+
+  async function createDocumentFrom(documents: PageGroup[]): Promise<PDFDocument> {
     /* Notes:
     Using pdfDoc.embedPages does not preserve hyperlinks (neither links to external pages nor internal links).
     Using pdfDoc.embedPdf also does not preserve annotations. (see https://github.com/Hopding/pdf-lib/issues/849 for an official response)
     Using pdfDoc.copyPages preserves annotations, but internal links still break. (see https://github.com/Hopding/pdf-lib/issues/341)
     copyPages also breaks forms (see https://github.com/Hopding/pdf-lib/issues/252)
     */
+
     const pdfDoc = await PDFDocument.create();
 
-    // Ew, not very pretty code
-    const pagesToEmbed: [Page, PDFPage | null][] = [];
-    const pagesToEmbedMap = new Map<string, { page: Page; callback: (embeddedPage: PDFPage) => void }[]>();
-    documents.forEach((v) =>
+    const pagesPerFile = new Map<string, Page[]>();
+    const pages = new Map<string, PDFPage>();
+    // Collect pages depending on what file they came from
+    documents.forEach((v) => {
       v.pages.forEach((page) => {
-        const v: [Page, PDFPage | null] = [page, null];
-        getOrDefault(pagesToEmbedMap, page.fileId, () => []).push({
-          page,
-          callback: (embeddedPage) => {
-            v[1] = embeddedPage;
-          },
-        });
-        pagesToEmbed.push(v);
-      })
-    );
+        getOrDefault(pagesPerFile, page.fileId, () => []).push(page);
+      });
+    });
 
+    // Copy page data to the new document
     await Promise.all(
-      [...pagesToEmbedMap.entries()].map(async ([fileId, pagesToEmbed]) => {
+      [...pagesPerFile.entries()].map(async ([fileId, pagesToEmbed]) => {
         const pdf = session.value.files.get(fileId)?.document;
         if (pdf === undefined) return;
 
-        const result = await pdfDoc.copyPages(
-          pdf,
-          pagesToEmbed.map((v) => v.page.pageIndex)
-        );
+        const result = await pdfDoc.copyPages(pdf, removeDuplicates(pagesToEmbed.map((v) => v.pageIndex)));
         result.forEach((embeddedPage, index) => {
-          pagesToEmbed[index].callback(embeddedPage);
+          const page = pagesToEmbed[index];
+          pages.set(pageToMapKey(page), embeddedPage);
         });
       })
     );
 
-    pagesToEmbed.forEach(([, embeddedPage]) => {
-      if (embeddedPage !== null) {
-        pdfDoc.addPage(embeddedPage);
-      }
-    });
-
+    // Actually insert the pages into the new document
+    documents.forEach((v) =>
+      v.pages.forEach((page) => {
+        pdfDoc.addPage(pages.get(pageToMapKey(page)));
+      })
+    );
     return pdfDoc;
   }
 
@@ -199,7 +201,7 @@ export const useDocumentSessionStore = defineStore("document-session-store", () 
     linkElement.setAttribute("download", fileName);
     linkElement.setAttribute("rel", "noopener");
 
-    const mergedDocument = await merge(session.value.groups);
+    const mergedDocument = await createDocumentFrom(session.value.groups);
     const documentBytes = await mergedDocument.save();
 
     const blobUrl = URL.createObjectURL(new Blob([documentBytes]));

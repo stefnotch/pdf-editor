@@ -14,6 +14,8 @@ import * as pdfjs from "pdfjs-dist";
 
 // TODO: Get rid of this disgusting hack once Firefox gets worker modules support.
 // https://bugzilla.mozilla.org/show_bug.cgi?id=1247687
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import PdfjsWorker from "pdfjs-dist/build/pdf.worker.js?worker&url";
 pdfjs.GlobalWorkerOptions.workerPort = new Worker(PdfjsWorker.replace(/type=module/, ""), {
   type: "classic",
