@@ -29,33 +29,26 @@ interface RenderedPageRow {
   pages: Page[];
 }
 
-const maximumPagesPerRow = computed(() =>
-  Math.floor(pagesViewSize.width.value / pageBounds.value.x)
+const maximumPagesPerRow = computed(
+  () => Math.max(1, Math.floor(pagesViewSize.width.value / pageBounds.value.x)) // Without the minimum, this can be zero, which is terrible
 );
 
-// TODO: Why does this lead to a browser hang if I change it to a computed, and then edit the pageBounds?
-const renderedDocuments = ref<RenderedDocument[]>([]);
-watch(
-  [pageGroups, maximumPagesPerRow],
-  ([pageGroups, maximumPagesPerRow]) => {
-    renderedDocuments.value = pageGroups.map((group) => {
-      const doc: RenderedDocument = {
-        name: group.name,
-        rows: [],
+const renderedDocuments = computed(() => {
+  const pagesPerRow = maximumPagesPerRow.value;
+  return pageGroups.value.map((group) => {
+    const doc: RenderedDocument = {
+      name: group.name,
+      rows: [],
+    };
+    for (let i = 0; i < group.pages.length; i += pagesPerRow) {
+      const row: RenderedPageRow = {
+        pages: group.pages.slice(i, i + pagesPerRow),
       };
-      for (let i = 0; i < group.pages.length; i += maximumPagesPerRow) {
-        const row: RenderedPageRow = {
-          pages: group.pages.slice(i, i + maximumPagesPerRow),
-        };
-        doc.rows.push(row);
-      }
-      return doc;
-    });
-  },
-  {
-    deep: true,
-  }
-);
+      doc.rows.push(row);
+    }
+    return doc;
+  });
+});
 
 const documentHeaderHeight = ref(20);
 
@@ -80,7 +73,7 @@ function fileUploaded(data: { fileList: UploadFileInfo[] }) {
 }
 </script>
 <template>
-  <div v-if="renderedDocuments.length === 0">
+  <div v-if="pageGroups.length === 0">
     <h1>PDF Editor</h1>
     <span>No PDFs selected</span>
 
@@ -102,7 +95,11 @@ function fileUploaded(data: { fileList: UploadFileInfo[] }) {
       </n-upload-dragger>
     </n-upload>
   </div>
-  <div v-else ref="pagesViewElement" class="h-full overflow-y-scroll">
+  <div
+    v-else
+    ref="pagesViewElement"
+    class="absolute h-full w-full overflow-y-scroll overflow-x-hidden"
+  >
     <div
       v-for="(document, index) in renderedDocuments"
       :key="index"
