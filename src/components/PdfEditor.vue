@@ -2,6 +2,7 @@
 import { useDocumentSessionStore, type Page } from "@/stores/document-sessions";
 import { useElementSize } from "@vueuse/core";
 import type { UploadFileInfo } from "naive-ui";
+import type { ComputedRef } from "vue";
 import PdfPage from "./PdfPage.vue";
 
 const documentSessionStore = useDocumentSessionStore();
@@ -22,7 +23,7 @@ const pageBounds = ref<Vector2>({
 interface RenderedDocument {
   id: number;
   name: string;
-  rows: RenderedPageRow[];
+  rows: ComputedRef<RenderedPageRow[]>;
 }
 
 interface RenderedPageRow {
@@ -33,21 +34,23 @@ const maximumPagesPerRow = computed(
   () => Math.max(1, Math.floor(pagesViewSize.width.value / pageBounds.value.x)) // Without the minimum, this can be zero, which is terrible
 );
 
-const renderedDocuments = computed(() => {
+const renderedDocuments = computed<RenderedDocument[]>(() => {
   const pagesPerRow = maximumPagesPerRow.value;
   return documentSessionStore.session.groups.map((group, index) => {
-    const doc: RenderedDocument = {
+    return {
       id: index,
       name: group.name,
-      rows: [],
+      // TODO: Check if such nested computed()s get cleaned up correctly
+      rows: computed(() => {
+        const rows: RenderedPageRow[] = [];
+        for (let i = 0; i < group.pages.length; i += pagesPerRow) {
+          rows.push({
+            pages: group.pages.slice(i, i + pagesPerRow),
+          });
+        }
+        return rows;
+      }),
     };
-    for (let i = 0; i < group.pages.length; i += pagesPerRow) {
-      const row: RenderedPageRow = {
-        pages: group.pages.slice(i, i + pagesPerRow),
-      };
-      doc.rows.push(row);
-    }
-    return doc;
   });
 });
 
@@ -120,7 +123,7 @@ function updateDocumentName(doc: RenderedDocument, name: string) {
         />
       </div>
       <div
-        v-for="(row, index) in document.rows"
+        v-for="(row, index) in document.rows.value"
         :key="index"
         class="pdf-page-row"
       >
