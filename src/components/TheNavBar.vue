@@ -14,8 +14,7 @@ function fileUploaded(data: { fileList: UploadFileInfo[] }) {
 </script>
 
 <template>
-  <div class="nav-bar">
-    <h1>PDF Editor</h1>
+  <div class="border-b-1 flex flex-row">
     <n-upload
       :default-upload="false"
       accept="application/pdf"
@@ -33,8 +32,3 @@ function fileUploaded(data: { fileList: UploadFileInfo[] }) {
     </n-button>
   </div>
 </template>
-<style scoped>
-.nav-bar {
-  border-bottom: 1px solid black;
-}
-</style>

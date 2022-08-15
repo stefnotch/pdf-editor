@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useDocumentSessionStore, type Page } from "@/stores/document-sessions";
 import { useElementSize } from "@vueuse/core";
+import type { UploadFileInfo } from "naive-ui";
 import PdfPage from "./PdfPage.vue";
 
 const documentSessionStore = useDocumentSessionStore();
@@ -28,7 +29,9 @@ interface RenderedPageRow {
   pages: Page[];
 }
 
-const maximumPagesPerRow = computed(() => Math.floor(pagesViewSize.width.value / pageBounds.value.x));
+const maximumPagesPerRow = computed(() =>
+  Math.floor(pagesViewSize.width.value / pageBounds.value.x)
+);
 
 // TODO: Why does this lead to a browser hang if I change it to a computed, and then edit the pageBounds?
 const renderedDocuments = ref<RenderedDocument[]>([]);
@@ -69,12 +72,50 @@ const documentHeaderHeight = ref(20);
  */
 
 // TODO: When resizing/zooming, make sure that the *same* pages remain visible.
+
+function fileUploaded(data: { fileList: UploadFileInfo[] }) {
+  documentSessionStore.addFiles(
+    data.fileList.flatMap((f) => (f.file ? [f.file] : []))
+  );
+}
 </script>
 <template>
-  <div ref="pagesViewElement" class="h-full overflow-y-scroll">
-    <div v-for="(document, index) in renderedDocuments" :key="index" class="pdf-document">
-      <div :style="{ height: documentHeaderHeight + 'px' }">{{ document.name }}</div>
-      <div v-for="(row, index) in document.rows" :key="index" class="pdf-page-row">
+  <div v-if="renderedDocuments.length === 0">
+    <h1>PDF Editor</h1>
+    <span>No PDFs selected</span>
+
+    <n-upload
+      :default-upload="false"
+      accept="application/pdf"
+      :file-list="[]"
+      multiple
+      directory-dnd
+      @change="fileUploaded"
+    >
+      <n-upload-dragger>
+        <n-text style="font-size: 16px">
+          Click or drag a PDF to this area
+        </n-text>
+        <n-p depth="3" style="margin: 8px 0 0 0">
+          All PDFs are private and will only be stored on your local machine.
+        </n-p>
+      </n-upload-dragger>
+    </n-upload>
+  </div>
+  <div v-else ref="pagesViewElement" class="h-full overflow-y-scroll">
+    <div
+      v-for="(document, index) in renderedDocuments"
+      :key="index"
+      class="pdf-document"
+    >
+      <div :style="{ height: documentHeaderHeight + 'px' }">
+        {{ document.name }}
+      </div>
+      <div
+        v-for="(row, index) in document.rows"
+        :key="index"
+        class="pdf-page-row"
+      >
         <div v-for="(page, index) in row.pages" :key="index" class="pdf-page">
           <PdfPage :page="page" :bounds="pageBounds"></PdfPage>
         </div>
