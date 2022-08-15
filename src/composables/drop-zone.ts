@@ -40,7 +40,7 @@ function hasFiles(dataTransfer: DataTransfer): boolean {
 }
 
 export function useDropZone(
-  target: Ref<HTMLElement | null>,
+  target: Ref<HTMLElement | null | undefined>,
   onDrop?: (files: File[] | null) => void
 ): UseDropZoneReturn {
   const isOverDropZone = ref(false);
