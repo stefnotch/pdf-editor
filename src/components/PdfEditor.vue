@@ -5,7 +5,6 @@ import type { UploadFileInfo } from "naive-ui";
 import PdfPage from "./PdfPage.vue";
 
 const documentSessionStore = useDocumentSessionStore();
-const pageGroups = computed(() => documentSessionStore.session.groups);
 
 const pagesViewElement = ref<HTMLElement | null>(null);
 const pagesViewSize = useElementSize(pagesViewElement);
@@ -21,6 +20,7 @@ const pageBounds = ref<Vector2>({
 });
 
 interface RenderedDocument {
+  id: number;
   name: string;
   rows: RenderedPageRow[];
 }
@@ -35,8 +35,9 @@ const maximumPagesPerRow = computed(
 
 const renderedDocuments = computed(() => {
   const pagesPerRow = maximumPagesPerRow.value;
-  return pageGroups.value.map((group) => {
+  return documentSessionStore.session.groups.map((group, index) => {
     const doc: RenderedDocument = {
+      id: index,
       name: group.name,
       rows: [],
     };
@@ -50,7 +51,7 @@ const renderedDocuments = computed(() => {
   });
 });
 
-const documentHeaderHeight = ref(20);
+const documentHeaderHeight = ref(40);
 
 /**
  * # Virtual List VS Resize Observer
@@ -71,9 +72,13 @@ function fileUploaded(data: { fileList: UploadFileInfo[] }) {
     data.fileList.flatMap((f) => (f.file ? [f.file] : []))
   );
 }
+
+function updateDocumentName(doc: RenderedDocument, name: string) {
+  documentSessionStore.session.groups[doc.id].name = name;
+}
 </script>
 <template>
-  <div v-if="pageGroups.length === 0">
+  <div v-if="documentSessionStore.session.groups.length === 0">
     <h1>PDF Editor</h1>
     <span>No PDFs selected</span>
 
@@ -106,7 +111,13 @@ function fileUploaded(data: { fileList: UploadFileInfo[] }) {
       class="pdf-document"
     >
       <div :style="{ height: documentHeaderHeight + 'px' }">
-        {{ document.name }}
+        <n-input
+          type="text"
+          size="small"
+          placeholder="Document name"
+          :value="document.name"
+          @update:value="(v: string) => updateDocumentName(document, v)"
+        />
       </div>
       <div
         v-for="(row, index) in document.rows"
@@ -114,6 +125,7 @@ function fileUploaded(data: { fileList: UploadFileInfo[] }) {
         class="pdf-page-row"
       >
         <div v-for="(page, index) in row.pages" :key="index" class="pdf-page">
+          <!-- TODO: Make pages selectable-->
           <PdfPage :page="page" :bounds="pageBounds"></PdfPage>
         </div>
       </div>
