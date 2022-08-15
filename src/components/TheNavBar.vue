@@ -1,15 +1,31 @@
 <script setup lang="ts">
 import { useDocumentSessionStore } from "@/stores/document-sessions";
+import type { UploadFileInfo } from "naive-ui";
 const documentSessionStore = useDocumentSessionStore();
 
 function download() {
   documentSessionStore.download();
+}
+function fileUploaded(data: { fileList: UploadFileInfo[] }) {
+  documentSessionStore.addFiles(
+    data.fileList.flatMap((f) => (f.file ? [f.file] : []))
+  );
 }
 </script>
 
 <template>
   <div class="nav-bar">
     <h1>PDF Editor</h1>
+    <n-upload
+      :default-upload="false"
+      accept="application/pdf"
+      :file-list="[]"
+      multiple
+      directory-dnd
+      @change="fileUploaded"
+    >
+      <n-button>Select PDFs</n-button>
+    </n-upload>
     <n-button type="primary" @click="download">
       Download
       <!--TODO: Put document name here, and give the button a max-width/a fixed width-->
