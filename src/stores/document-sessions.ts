@@ -76,6 +76,7 @@ function removeDuplicates<T>(values: T[]): T[] {
 export const useDocumentSessionStore = defineStore(
   "document-session-store",
   () => {
+    // TODO: Use beforeunload with a confirmation dialog if hasUnsavedChanges
     const hasUnsavedChanges = ref(false);
     const session = ref<PdfDocumentSession>({
       id: crypto.randomUUID(),
@@ -131,9 +132,9 @@ export const useDocumentSessionStore = defineStore(
 
           session.value.groups.push({
             name: withoutPdfExtension(file.name),
-            pages: pdfDocument.getPageIndices().map((pageIndex) => {
-              return { fileId: id, pageIndex: pageIndex };
-            }),
+            pages: pdfDocument
+              .getPageIndices()
+              .map((pageIndex) => ({ fileId: id, pageIndex: pageIndex })),
           });
         })
       );
@@ -206,19 +207,56 @@ export const useDocumentSessionStore = defineStore(
       return pdfDoc;
     }
 
+    async function createZip(files: { name: string; data: Uint8Array }[]) {
+      // Random note: Apparently https://github.com/sindresorhus/promise-fun can be used for various "better" promises
+
+      return new Promise<Uint8Array>((resolve, reject) => {
+        // TODO: Maybe set some additional options, like the compression level
+        zip(
+          Object.fromEntries(files.map((v) => [v.name, v.data])),
+          {},
+          (error, data) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(data);
+            }
+          }
+        );
+      });
+    }
+
     async function download() {
+      if (session.value.groups.length === 0) {
+        return;
+      } else if (session.value.groups.length === 1) {
+        const documentBytes = await createDocumentFrom(
+          session.value.groups
+        ).then((v) => v.save());
+        downloadBytes(documentName.value + ".pdf", documentBytes);
+      } else {
+        const documentBytes = await Promise.all(
+          session.value.groups.map((group) =>
+            createDocumentFrom([group])
+              .then((v) => v.save())
+              .then((v) => ({ name: group.name + ".pdf", data: v }))
+          )
+        );
+        // TODO: I might want to use https://github.com/sindresorhus/multi-download to download multiple files at once (on browsers where this works)
+        const zipBytes = await createZip(documentBytes);
+        downloadBytes(documentName.value + ".zip", zipBytes);
+      }
+    }
+
+    function downloadBytes(fileName: string, bytes: Uint8Array) {
       const linkElement = document.createElementNS(
         "http://www.w3.org/1999/xhtml",
         "a"
       );
-      const fileName = documentName.value + ".pdf";
       linkElement.setAttribute("download", fileName);
       linkElement.setAttribute("rel", "noopener");
 
-      const mergedDocument = await createDocumentFrom(session.value.groups);
-      const documentBytes = await mergedDocument.save();
-
-      const blobUrl = URL.createObjectURL(new Blob([documentBytes]));
+      const blobUrl = URL.createObjectURL(new Blob([bytes]));
       setTimeout(() => {
         URL.revokeObjectURL(blobUrl);
       }, 40 * 1000);

@@ -36,22 +36,20 @@ const maximumPagesPerRow = computed(
 
 const renderedDocuments = computed<RenderedDocument[]>(() => {
   const pagesPerRow = maximumPagesPerRow.value;
-  return documentSessionStore.session.groups.map((group, index) => {
-    return {
-      id: index,
-      name: group.name,
-      // TODO: Check if such nested computed()s get cleaned up correctly
-      rows: computed(() => {
-        const rows: RenderedPageRow[] = [];
-        for (let i = 0; i < group.pages.length; i += pagesPerRow) {
-          rows.push({
-            pages: group.pages.slice(i, i + pagesPerRow),
-          });
-        }
-        return rows;
-      }),
-    };
-  });
+  return documentSessionStore.session.groups.map((group, index) => ({
+    id: index,
+    name: group.name,
+    // TODO: Check if such nested computed()s get cleaned up correctly
+    rows: computed(() => {
+      const rows: RenderedPageRow[] = [];
+      for (let i = 0; i < group.pages.length; i += pagesPerRow) {
+        rows.push({
+          pages: group.pages.slice(i, i + pagesPerRow),
+        });
+      }
+      return rows;
+    }),
+  }));
 });
 
 const documentHeaderHeight = ref(40);
