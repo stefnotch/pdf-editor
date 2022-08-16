@@ -14,13 +14,12 @@ function fileUploaded(data: { fileList: UploadFileInfo[] }) {
 </script>
 
 <template>
-  <div class="border-b-1 flex flex-row">
+  <div class="border-b-1 flex flex-row p-t-1 p-x-2">
     <n-upload
       :default-upload="false"
       accept="application/pdf"
       :file-list="[]"
       multiple
-      directory-dnd
       @change="fileUploaded"
     >
       <n-button>Select PDFs</n-button>

@@ -4,6 +4,7 @@ import TheFileUploadOverlay from "./components/TheFileUploadOverlay.vue";
 import { useDocumentSessionStore } from "./stores/document-sessions";
 import TheNavBar from "./components/TheNavBar.vue";
 import { useDropZone } from "./composables/drop-zone";
+import TheBottomBar from "./components/TheBottomBar.vue";
 
 const documentSessionStore = useDocumentSessionStore();
 
@@ -25,11 +26,12 @@ const { isOverDropZone } = useDropZone(dropZoneRef, onDrop);
   <div class="absolute h-full w-full flex flex-col" ref="dropZoneRef">
     <TheNavBar></TheNavBar>
     <!-- Flexbox is terribly badly designed https://stackoverflow.com/questions/36230944/prevent-flex-items-from-overflowing-a-container -->
-    <div class="grow relative">
+    <div class="grow relative m-2">
       <div class="absolute h-full w-full">
         <PdfEditor></PdfEditor>
       </div>
     </div>
+    <TheBottomBar></TheBottomBar>
 
     <!--Overlay elements should be the final elements-->
     <TheFileUploadOverlay

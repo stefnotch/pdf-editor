@@ -15,6 +15,7 @@ declare module '@vue/runtime-core' {
     NUploadDragger: typeof import('naive-ui')['NUploadDragger']
     PdfEditor: typeof import('./src/components/PdfEditor.vue')['default']
     PdfPage: typeof import('./src/components/PdfPage.vue')['default']
+    TheBottomBar: typeof import('./src/components/TheBottomBar.vue')['default']
     TheFileUploadOverlay: typeof import('./src/components/TheFileUploadOverlay.vue')['default']
     TheNavBar: typeof import('./src/components/TheNavBar.vue')['default']
   }

@@ -1,6 +1,12 @@
 {
   "extends": "@vue/tsconfig/tsconfig.web.json",
-  "include": ["env.d.ts", "auto-imports.d.ts", "src/**/*", "src/**/*.vue"],
+  "include": [
+    "package.json",
+    "env.d.ts",
+    "auto-imports.d.ts",
+    "src/**/*",
+    "src/**/*.vue"
+  ],
   "exclude": ["node_modules"],
   "compilerOptions": {
     "target": "esnext",

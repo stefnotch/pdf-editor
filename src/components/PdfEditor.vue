@@ -53,6 +53,7 @@ const renderedDocuments = computed<RenderedDocument[]>(() => {
 });
 
 const documentHeaderHeight = ref(40);
+const documentPadding = ref(10);
 
 /**
  * # Virtual List VS Resize Observer
@@ -110,6 +111,7 @@ function updateDocumentName(doc: RenderedDocument, name: string) {
       v-for="(document, index) in renderedDocuments"
       :key="index"
       class="pdf-document"
+      :style="{ padding: documentPadding + 'px' }"
     >
       <div :style="{ height: documentHeaderHeight + 'px' }">
         <n-input
