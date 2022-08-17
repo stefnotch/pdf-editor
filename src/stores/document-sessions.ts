@@ -7,6 +7,7 @@ import {
   type UseMemoizeReturn,
 } from "@vueuse/core";
 import { zip } from "fflate";
+import mapUtils from "@/map-utils";
 
 /**
  * The data store for a given document.
@@ -19,13 +20,7 @@ export interface PdfDocumentSession {
   /**
    * The selected physical PDF files
    */
-  files: Map<
-    string,
-    {
-      file: File;
-      document: PDFDocument;
-    }
-  >;
+  files: Map<string, PhysicalPdfFile>;
 
   /**
    * The pdf.js documents
@@ -45,14 +40,62 @@ export interface PdfDocumentSession {
   groups: PageGroup[];
 }
 
+// Sharing the private constructor inside this module, so that the other classes can use it
+let createPageRef: (fileId: string, pageIndex: number) => PageRef;
+
+export class PageRef {
+  readonly fileId: string;
+  readonly pageIndex: number;
+
+  static {
+    createPageRef = (fileId: string, pageIndex: number) => {
+      return new PageRef(fileId, pageIndex);
+    };
+  }
+
+  private constructor(fileId: string, pageIndex: number) {
+    this.fileId = fileId;
+    this.pageIndex = pageIndex;
+  }
+}
+
+export class PhysicalPdfFile {
+  readonly id: string;
+  readonly file: Readonly<File>;
+  readonly document: PDFDocument;
+  readonly pageRefs = new Map<number, PageRef>();
+
+  private constructor(id: string, file: File, document: PDFDocument) {
+    this.id = id;
+    this.file = file;
+    this.document = document;
+  }
+
+  static async from(id: string, file: File) {
+    const binaryData = new Uint8Array(await file.arrayBuffer());
+    const pdfDocument = await PDFDocument.load(binaryData);
+    return new PhysicalPdfFile(id, file, pdfDocument);
+  }
+
+  getPage(pageIndex: number) {
+    if (0 <= pageIndex && pageIndex < this.document.getPageCount()) {
+      return mapUtils.getOrDefault(this.pageRefs, pageIndex, () =>
+        createPageRef(this.id, pageIndex)
+      );
+    } else {
+      throw new Error(`Page index out of bounds: ${pageIndex}`);
+    }
+  }
+}
+
 export interface PageGroup {
   name: string;
   pages: Page[];
 }
 
 export interface Page {
-  readonly fileId: string;
-  readonly pageIndex: number;
+  readonly id: string;
+  readonly page: PageRef;
 }
 
 export const { pixelRatio } = useDevicePixelRatio();
@@ -67,10 +110,6 @@ function getOrDefault<K, V>(map: Map<K, V>, key: K, defaultValue: () => V): V {
     map.set(key, value);
     return value;
   }
-}
-
-function removeDuplicates<T>(values: T[]): T[] {
-  return Array.from(new Set(values));
 }
 
 export const useDocumentSessionStore = defineStore(
@@ -100,11 +139,9 @@ export const useDocumentSessionStore = defineStore(
         files.map(async (file) => {
           const id = crypto.randomUUID();
           const binaryData = new Uint8Array(await file.arrayBuffer());
-          const pdfDocument = await PDFDocument.load(binaryData);
-          session.value.files.set(id, {
-            file,
-            document: markRaw(pdfDocument),
-          });
+
+          const pdfFile = markRaw(await PhysicalPdfFile.from(id, file));
+          session.value.files.set(id, pdfFile);
 
           // Instantly start loading the pdf.js document, since we'll need it
           pdfjs.getDocument({ data: binaryData }).promise.then((rendered) => {
@@ -132,9 +169,10 @@ export const useDocumentSessionStore = defineStore(
 
           session.value.groups.push({
             name: withoutPdfExtension(file.name),
-            pages: pdfDocument
-              .getPageIndices()
-              .map((pageIndex) => ({ fileId: id, pageIndex: pageIndex })),
+            pages: pdfFile.document.getPageIndices().map((pageIndex) => ({
+              id: crypto.randomUUID(),
+              page: pdfFile.getPage(pageIndex),
+            })),
           });
         })
       );
@@ -144,7 +182,7 @@ export const useDocumentSessionStore = defineStore(
       return fileName.replace(/\.pdf$/i, "");
     }
 
-    function getRenderedPage(page: Page): pdfjs.PDFPageProxy | null {
+    function getRenderedPage(page: PageRef): pdfjs.PDFPageProxy | null {
       const rendered = session.value.rendered.get(page.fileId);
       if (rendered === undefined) return null;
 
@@ -154,10 +192,6 @@ export const useDocumentSessionStore = defineStore(
       // Start loading it
       rendered.cache(page.pageIndex);
       return null;
-    }
-
-    function pageToMapKey(page: Page) {
-      return JSON.stringify([page.fileId, page.pageIndex]);
     }
 
     async function createDocumentFrom(
@@ -172,12 +206,15 @@ export const useDocumentSessionStore = defineStore(
 
       const pdfDoc = await PDFDocument.create();
 
-      const pagesPerFile = new Map<string, Page[]>();
-      const pages = new Map<string, PDFPage>();
+      const pagesPerFile = new Map<string, Set<PageRef>>();
+      const pages = new Map<PageRef, PDFPage>();
       // Collect pages depending on what file they came from
       documents.forEach((v) => {
         v.pages.forEach((page) => {
-          getOrDefault(pagesPerFile, page.fileId, () => []).push(page);
+          const pageRef = page.page;
+          getOrDefault(pagesPerFile, pageRef.fileId, () => new Set()).add(
+            pageRef
+          );
         });
       });
 
@@ -187,13 +224,13 @@ export const useDocumentSessionStore = defineStore(
           const pdf = session.value.files.get(fileId)?.document;
           if (pdf === undefined) return;
 
+          const pageRefs = [...pagesToEmbed.values()];
           const result = await pdfDoc.copyPages(
             pdf,
-            removeDuplicates(pagesToEmbed.map((v) => v.pageIndex))
+            pageRefs.map((v) => v.pageIndex)
           );
           result.forEach((embeddedPage, index) => {
-            const page = pagesToEmbed[index];
-            pages.set(pageToMapKey(page), embeddedPage);
+            pages.set(pageRefs[index], embeddedPage);
           });
         })
       );
@@ -201,7 +238,7 @@ export const useDocumentSessionStore = defineStore(
       // Actually insert the pages into the new document
       documents.forEach((v) =>
         v.pages.forEach((page) => {
-          pdfDoc.addPage(pages.get(pageToMapKey(page)));
+          pdfDoc.addPage(pages.get(page.page));
         })
       );
       return pdfDoc;

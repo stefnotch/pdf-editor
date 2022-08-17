@@ -21,7 +21,7 @@ const pageCanvas = ref<HTMLCanvasElement | null>(null);
 const documentSessionStore = useDocumentSessionStore();
 
 const pageToRender = computed(() =>
-  documentSessionStore.getRenderedPage(props.page)
+  documentSessionStore.getRenderedPage(props.page.page)
 );
 
 let cancelRenderTask: () => Promise<void> = () => Promise.resolve();
@@ -73,10 +73,15 @@ watch(
 </script>
 <template>
   <!-- TODO: Only render the page when this element is visible -->
-  <div class="relative h-full w-full">
+  <div class="relative h-full w-full page" tabindex="0">
     <canvas ref="pageCanvas"></canvas>
     <div class="absolute bottom-0 bg-slate-400 right-0 left-0">
-      page {{ page.pageIndex + 1 }}
+      page {{ page.page.pageIndex + 1 }}
     </div>
   </div>
 </template>
+<style scoped>
+.page:focus {
+  outline: 2px solid black;
+}
+</style>
