@@ -42,6 +42,7 @@ The most important ones are
 
 - [Typescript](https://www.typescriptlang.org/) - Typesafe Javascript
 - [Vue 3](https://github.com/vuejs/vue-next/) - Vue 3 with [the composition API](https://vuejs.org/guide/extras/composition-api-faq.html#what-is-composition-api)
+- [Naive UI](https://www.naiveui.com/en-US/os-theme/components/button) as a component library
 
 We are also using
 
