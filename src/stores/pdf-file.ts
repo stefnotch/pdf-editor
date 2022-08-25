@@ -1,4 +1,3 @@
-// Deals with physical PDFs that are saved on the hard drive
 import { PDFDocument } from "pdf-lib";
 import mapUtils from "@/map-utils";
 
@@ -7,6 +6,9 @@ export type GeneratedId = string;
 // Sharing the private constructor inside this module, so that the other classes can use it
 let createPageRef: (fileId: string, pageIndex: number) => PageRef;
 
+/**
+ * References a single page in a PDF file.
+ */
 export class PageRef {
   readonly fileId: string;
   readonly pageIndex: number;
@@ -23,6 +25,9 @@ export class PageRef {
   }
 }
 
+/**
+ *  Deals with physical PDFs that are saved on the hard drive
+ */
 export class PhysicalPdfFile {
   readonly id: GeneratedId;
   readonly file: Readonly<File>;
