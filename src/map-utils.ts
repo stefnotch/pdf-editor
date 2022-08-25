@@ -8,4 +8,17 @@ export default {
       return value;
     }
   },
+  groupBy<K, V>(values: V[], keySelector: (x: V) => K): Map<K, V[]> {
+    const result = new Map<K, V[]>();
+    values.forEach((value) => {
+      const key = keySelector(value);
+      const group = result.get(key);
+      if (group) {
+        group.push(value);
+      } else {
+        result.set(key, [value]);
+      }
+    });
+    return result;
+  },
 };

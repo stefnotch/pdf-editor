@@ -7,9 +7,8 @@ import {
   type UseMemoizeReturn,
 } from "@vueuse/core";
 import { zip } from "fflate";
+import { type GeneratedId, type PageRef, PhysicalPdfFile } from "./pdf-file";
 import mapUtils from "@/map-utils";
-
-type GeneratedId = string;
 
 /**
  * The data store for a given document.
@@ -28,7 +27,7 @@ export interface PdfDocumentSession {
    * The pdf.js documents
    */
   rendered: Map<
-    string,
+    GeneratedId,
     {
       document: pdfjs.PDFDocumentProxy;
       cache: UseMemoizeReturn<Promise<pdfjs.PDFPageProxy>, [number]>;
@@ -42,77 +41,19 @@ export interface PdfDocumentSession {
   groups: PageGroup[];
 }
 
-// Sharing the private constructor inside this module, so that the other classes can use it
-let createPageRef: (fileId: string, pageIndex: number) => PageRef;
-
-export class PageRef {
-  readonly fileId: string;
-  readonly pageIndex: number;
-
-  static {
-    createPageRef = (fileId: string, pageIndex: number) => {
-      return new PageRef(fileId, pageIndex);
-    };
-  }
-
-  private constructor(fileId: string, pageIndex: number) {
-    this.fileId = fileId;
-    this.pageIndex = pageIndex;
-  }
-}
-
-export class PhysicalPdfFile {
-  readonly id: GeneratedId;
-  readonly file: Readonly<File>;
-  readonly document: PDFDocument;
-  readonly pageRefs = new Map<number, PageRef>();
-
-  private constructor(id: string, file: File, document: PDFDocument) {
-    this.id = id;
-    this.file = file;
-    this.document = document;
-  }
-
-  static async from(id: string, file: File) {
-    const binaryData = new Uint8Array(await file.arrayBuffer());
-    const pdfDocument = await PDFDocument.load(binaryData);
-    return new PhysicalPdfFile(id, file, pdfDocument);
-  }
-
-  getPage(pageIndex: number) {
-    if (0 <= pageIndex && pageIndex < this.document.getPageCount()) {
-      return mapUtils.getOrDefault(this.pageRefs, pageIndex, () =>
-        createPageRef(this.id, pageIndex)
-      );
-    } else {
-      throw new Error(`Page index out of bounds: ${pageIndex}`);
-    }
-  }
-}
-
 export interface PageGroup {
   name: string;
   pages: Page[];
 }
 
 export interface Page {
-  readonly id: string;
+  readonly id: GeneratedId;
   readonly page: PageRef;
 }
 
 export const { pixelRatio } = useDevicePixelRatio();
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function getOrDefault<K, V>(map: Map<K, V>, key: K, defaultValue: () => V): V {
-  if (map.has(key)) {
-    return map.get(key) as V;
-  } else {
-    const value = defaultValue();
-    map.set(key, value);
-    return value;
-  }
-}
 
 export const useDocumentSessionStore = defineStore(
   "document-session-store",
@@ -214,9 +155,9 @@ export const useDocumentSessionStore = defineStore(
       documents.forEach((v) => {
         v.pages.forEach((page) => {
           const pageRef = page.page;
-          getOrDefault(pagesPerFile, pageRef.fileId, () => new Set()).add(
-            pageRef
-          );
+          mapUtils
+            .getOrDefault(pagesPerFile, pageRef.fileId, () => new Set())
+            .add(pageRef);
         });
       });
 

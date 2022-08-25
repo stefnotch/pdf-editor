@@ -69,7 +69,7 @@ const documentPadding = ref(10);
 
 // TODO: When resizing/zooming, make sure that the *same* pages remain visible.
 
-function fileUploaded(data: { fileList: UploadFileInfo[] }) {
+function fileUploaded(data: { fileList: UploadFileInfo[] }) { 
   documentSessionStore.addFiles(
     data.fileList.flatMap((f) => (f.file ? [f.file] : []))
   );
