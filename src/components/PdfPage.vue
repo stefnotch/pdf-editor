@@ -13,6 +13,10 @@ const props = defineProps<{
   };
 }>();
 
+const emits = defineEmits<{
+  (e: "select"): void;
+}>();
+
 // TODO: Faster rendering using https://github.com/mozilla/pdf.js/issues/10319
 // Relevant Firefox bug https://bugzilla.mozilla.org/show_bug.cgi?id=1390089
 
@@ -23,6 +27,11 @@ const documentSessionStore = useDocumentSessionStore();
 const pageToRender = computed(() =>
   documentSessionStore.getRenderedPage(props.page.page)
 );
+
+function onPointerDown() {
+  // TODO: Handle shift clicking, ctrl clicking, etc.
+  emits("select");
+}
 
 let cancelRenderTask: () => Promise<void> = () => Promise.resolve();
 watch(
@@ -73,7 +82,14 @@ watch(
 </script>
 <template>
   <!-- TODO: Only render the page when this element is visible -->
-  <div class="relative h-full w-full page" tabindex="0">
+  <div
+    class="relative h-full w-full page"
+    :class="{
+      selected: props.page.selected,
+    }"
+    tabindex="0"
+    @pointerdown="onPointerDown"
+  >
     <canvas ref="pageCanvas"></canvas>
     <div class="absolute bottom-0 bg-slate-400 right-0 left-0">
       page {{ page.page.pageIndex + 1 }}
@@ -83,5 +99,8 @@ watch(
 <style scoped>
 .page:focus {
   outline: 2px solid black;
+}
+.selected {
+  outline: 1px solid blue;
 }
 </style>

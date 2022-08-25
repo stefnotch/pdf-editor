@@ -69,7 +69,7 @@ const documentPadding = ref(10);
 
 // TODO: When resizing/zooming, make sure that the *same* pages remain visible.
 
-function fileUploaded(data: { fileList: UploadFileInfo[] }) { 
+function fileUploaded(data: { fileList: UploadFileInfo[] }) {
   documentSessionStore.addFiles(
     data.fileList.flatMap((f) => (f.file ? [f.file] : []))
   );
@@ -77,6 +77,13 @@ function fileUploaded(data: { fileList: UploadFileInfo[] }) {
 
 function updateDocumentName(doc: RenderedDocument, name: string) {
   documentSessionStore.session.groups[doc.id].name = name;
+}
+
+function selectPage(pageId: string) {
+  const page = documentSessionStore.getPage(pageId);
+  if (page) {
+    page.selected = !page.selected;
+  }
 }
 </script>
 <template>
@@ -129,7 +136,11 @@ function updateDocumentName(doc: RenderedDocument, name: string) {
       >
         <div v-for="(page, index) in row.pages" :key="index" class="pdf-page">
           <!-- TODO: Make pages selectable-->
-          <PdfPage :page="page" :bounds="pageBounds"></PdfPage>
+          <PdfPage
+            :page="page"
+            :bounds="pageBounds"
+            @select="selectPage(page.id)"
+          ></PdfPage>
         </div>
       </div>
     </div>

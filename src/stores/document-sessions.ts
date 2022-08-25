@@ -9,6 +9,7 @@ import {
 import { zip } from "fflate";
 import { type GeneratedId, type PageRef, PhysicalPdfFile } from "./pdf-file";
 import mapUtils from "@/map-utils";
+import { useElementSelection } from "@/composables/element-selection";
 
 /**
  * The data store for a given document.
@@ -49,6 +50,7 @@ export interface PageGroup {
 export interface Page {
   readonly id: GeneratedId;
   readonly page: PageRef;
+  selected: boolean;
 }
 
 export const { pixelRatio } = useDevicePixelRatio();
@@ -66,6 +68,7 @@ export const useDocumentSessionStore = defineStore(
       rendered: new Map(),
       groups: [],
     });
+    const selection = useElementSelection<Page>();
 
     const documentName = computed(() => {
       const groups = session.value.groups;
@@ -112,12 +115,26 @@ export const useDocumentSessionStore = defineStore(
 
           session.value.groups.push({
             name: withoutPdfExtension(file.name),
-            pages: pdfFile.document.getPageIndices().map((pageIndex) => ({
-              id: crypto.randomUUID(),
-              page: pdfFile.getPage(pageIndex),
-            })),
+            pages: pdfFile.document.getPageIndices().map((pageIndex) => {
+              const page = {
+                id: crypto.randomUUID(),
+                page: pdfFile.getPage(pageIndex),
+                selected: false,
+              };
+              // TODO: Cleanup the stop handle
+              const stopHandle = selection.watchElement(page);
+              return page;
+            }),
           });
         })
+      );
+    }
+
+    function getPage(id: GeneratedId): Page | null {
+      return (
+        session.value.groups
+          .flatMap((group) => group.pages)
+          .find((v) => v.id === id) ?? null
       );
     }
 
@@ -245,10 +262,12 @@ export const useDocumentSessionStore = defineStore(
     }
 
     return {
+      selection,
       addFiles,
       documentName,
       session,
       hasUnsavedChanges,
+      getPage,
       getRenderedPage,
       download,
     };
