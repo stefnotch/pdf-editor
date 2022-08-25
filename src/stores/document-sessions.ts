@@ -9,6 +9,8 @@ import {
 import { zip } from "fflate";
 import mapUtils from "@/map-utils";
 
+type GeneratedId = string;
+
 /**
  * The data store for a given document.
  * Notice how it's a mostly non-destructive format. It doesn't apply the changes, instead it stores what the final document should look like.
@@ -20,7 +22,7 @@ export interface PdfDocumentSession {
   /**
    * The selected physical PDF files
    */
-  files: Map<string, PhysicalPdfFile>;
+  files: Map<GeneratedId, PhysicalPdfFile>;
 
   /**
    * The pdf.js documents
@@ -60,7 +62,7 @@ export class PageRef {
 }
 
 export class PhysicalPdfFile {
-  readonly id: string;
+  readonly id: GeneratedId;
   readonly file: Readonly<File>;
   readonly document: PDFDocument;
   readonly pageRefs = new Map<number, PageRef>();
