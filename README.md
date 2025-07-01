@@ -1,6 +1,6 @@
 # PDF Editor
 
-Try out https://github.com/aarkue/pdf-tools-web/ or https://github.com/24eme/signaturepdf instead!
+Try out https://github.com/Stirling-Tools/Stirling-PDF or https://github.com/24eme/signaturepdf instead!
 
 Still a work in progress, check back later or *watch* this project's releases.
 
